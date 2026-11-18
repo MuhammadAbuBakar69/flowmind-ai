@@ -155,7 +155,7 @@ function openWorkflow(id) {
   $("#findings").hidden = true;
   show("studio");
   render();
-  fitToScreen();
+  frameGraph();
 }
 
 function startNew(name = "Untitled workflow", nodes = [], connections = []) {
@@ -659,6 +659,31 @@ function fitToScreen() {
     x: (rect.width - w * z) / 2 - minX * z,
     y: (rect.height - h * z) / 2 - minY * z,
   };
+  renderCanvas();
+}
+
+/**
+ * Open a graph at a readable zoom instead of letterboxing a wide graph into
+ * unreadable text. Anchors top-left so the trigger is the first thing seen.
+ */
+function frameGraph() {
+  const canvas = $("#canvas");
+  if (!state.wf || !state.wf.nodes.length || !canvas) {
+    state.view = { x: 0, y: 0, z: 1 };
+    if (canvas) renderCanvas();
+    return;
+  }
+  const rect = canvas.getBoundingClientRect();
+  const pad = 44;
+  const xs = state.wf.nodes.map((n) => n.x);
+  const ys = state.wf.nodes.map((n) => n.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const w = Math.max(...xs) + NODE_W - minX;
+  const h = Math.max(...ys) + 100 - minY;
+  const raw = Math.min((rect.width - pad * 2) / w, (rect.height - pad * 2) / h);
+  const z = Math.max(0.75, Math.min(1, raw));
+  state.view = { z, x: pad - minX * z, y: pad - minY * z };
   renderCanvas();
 }
 
