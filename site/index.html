@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FlowMind AI · Workflow Studio</title>
+<meta name="description" content="FlowMind AI workflow studio: a real drag-and-drop workflow graph editor with validation and local persistence." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app" id="app">
+  <!-- icon rail -->
+  <nav class="rail" aria-label="Primary">
+    <div class="rail-brand" title="FlowMind AI">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 7h5l3 5 3-5h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="4" cy="7" r="2" fill="currentColor"/><circle cx="20" cy="7" r="2" fill="currentColor"/><circle cx="12" cy="17" r="2" fill="currentColor"/><path d="M12 12v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    </div>
+    <button class="rail-btn is-active" data-nav="workflows" aria-label="Workflows" title="Workflows">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    </button>
+    <button class="rail-btn" data-nav="library" aria-label="Node library" title="Node library">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="2" stroke="currentColor" stroke-width="1.6" fill="none"/><rect x="13.5" y="3.5" width="7" height="7" rx="2" stroke="currentColor" stroke-width="1.6" fill="none"/><rect x="3.5" y="13.5" width="7" height="7" rx="2" stroke="currentColor" stroke-width="1.6" fill="none"/><rect x="13.5" y="13.5" width="7" height="7" rx="2" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+    </button>
+    <button class="rail-btn" data-nav="history" aria-label="History" title="History">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="8.2" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <button class="rail-btn" data-nav="models" aria-label="Models" title="Models">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3.5l7 3.6v9.8l-7 3.6-7-3.6V7.1z" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M12 12l7-3.5M12 12v8.5M12 12L5 8.5" stroke="currentColor" stroke-width="1.4"/></svg>
+    </button>
+    <div class="rail-spacer"></div>
+    <button class="rail-btn" data-nav="settings" aria-label="Settings" title="Settings">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6.2 6.2l1.4 1.4M16.4 16.4l1.4 1.4M17.8 6.2l-1.4 1.4M7.6 16.4l-1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <div class="rail-user" title="Local workspace">AB</div>
+  </nav>
+
+  <!-- workflows view -->
+  <main class="view" id="view-workflows">
+    <header class="view-head">
+      <div>
+        <p class="eyebrow">Workspace</p>
+        <h1>Workflows</h1>
+        <p class="lede">Build a graph, validate it, keep it. The editor persists locally in this browser; the Base44 backend is the next phase.</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn btn-primary" id="new-workflow">+ New workflow</button>
+        <label class="btn" for="import-file">Import JSON</label>
+        <input type="file" id="import-file" accept="application/json" hidden />
+      </div>
+    </header>
+
+    <section class="stats" id="stats" aria-label="Workspace summary"></section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Your workflows</h2>
+        <span class="muted" id="workflow-count"></span>
+      </div>
+      <div id="workflow-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Templates</h2>
+        <span class="muted">Real editable graphs, cloned into your workspace</span>
+      </div>
+      <div class="template-grid" id="template-grid"></div>
+    </section>
+
+    <footer class="view-foot">
+      <p>Honest scope: this build is the editor and the graph engine. Execution, integrations, scheduling and AI agents run on the Base44 backend and are not connected here.</p>
+    </footer>
+  </main>
+
+  <!-- studio view -->
+  <main class="studio" id="view-studio" hidden>
+    <header class="studio-bar">
+      <button class="btn btn-ghost" id="back-home" title="Back to workflows">←</button>
+      <div class="breadcrumb">
+        <span class="muted">Workspace</span>
+        <span class="sep">/</span>
+        <span class="muted">Workflows</span>
+        <span class="sep">/</span>
+        <input id="workflow-name" class="name-input" aria-label="Workflow name" />
+      </div>
+      <span class="pill" id="status-pill">draft</span>
+      <div class="studio-actions">
+        <span class="save-state" id="save-state">Saved</span>
+        <button class="btn" id="btn-validate">Validate</button>
+        <button class="btn" id="btn-export">Export</button>
+        <button class="btn" id="btn-fit" title="Fit to screen">Fit</button>
+        <button class="btn btn-primary" id="btn-run" disabled title="Execution engine lands with the Base44 backend">Run</button>
+      </div>
+    </header>
+
+    <div class="studio-body">
+      <aside class="library" id="library">
+        <div class="library-head">
+          <div>
+            <h2>Components</h2>
+            <p class="muted small">Drag onto the canvas</p>
+          </div>
+        </div>
+        <input type="search" id="node-search" class="search" placeholder="Search components" aria-label="Search components" />
+        <div id="library-list" class="library-list"></div>
+      </aside>
+
+      <section class="canvas-wrap">
+        <div class="canvas" id="canvas">
+          <div class="world" id="world">
+            <svg class="edges" id="edges" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <filter id="glow" x="-20%" y="-40%" width="140%" height="180%">
+                  <feGaussianBlur stdDeviation="2.4" result="b" />
+                  <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+              <g id="edge-layer"></g>
+              <path id="pending-edge" class="pending-edge" d="" hidden />
+            </svg>
+            <div id="node-layer"></div>
+          </div>
+
+          <div class="canvas-empty" id="canvas-empty">
+            <p class="empty-title">Drop a trigger to begin</p>
+            <p class="muted small">Drag from the library, then connect nodes by pulling from a right-hand port to a left-hand port.</p>
+          </div>
+
+          <div class="canvas-controls">
+            <button class="ctrl" data-zoom="in" title="Zoom in">+</button>
+            <button class="ctrl" data-zoom="out" title="Zoom out">−</button>
+            <button class="ctrl" data-zoom="reset" title="Fit to screen">⤢</button>
+            <span class="zoom-label" id="zoom-label">100%</span>
+          </div>
+
+          <div class="minimap" id="minimap" aria-hidden="true"><svg id="minimap-svg"></svg></div>
+
+          <div class="findings" id="findings" hidden></div>
+        </div>
+
+        <div class="dock" id="dock">
+          <div class="dock-panels">
+            <section class="dock-panel">
+              <header class="dock-head">
+                <h3>Live execution logs</h3>
+                <span class="pill pill-quiet">idle</span>
+              </header>
+              <div class="dock-body">
+                <p class="empty-line">No executions yet.</p>
+                <p class="muted small">Runs are executed on the Base44 backend and are not connected in this build. Nothing here is simulated, so the panel stays empty until that engine lands.</p>
+              </div>
+            </section>
+            <section class="dock-panel">
+              <header class="dock-head">
+                <h3>AI Copilot</h3>
+                <span class="pill pill-quiet">phase 4</span>
+              </header>
+              <div class="dock-body">
+                <p class="muted small">Prompt to graph generation arrives with the backend. This input is disabled on purpose.</p>
+                <form class="copilot" onsubmit="return false">
+                  <input class="copilot-input" placeholder="Describe the workflow you want…" disabled />
+                  <button class="btn" disabled>Send</button>
+                </form>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <aside class="props" id="props">
+        <div class="props-empty" id="props-empty">
+          <p class="empty-title">No node selected</p>
+          <p class="muted small">Select a node to configure it. Every field writes to the saved graph.</p>
+        </div>
+        <div id="props-body" hidden></div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

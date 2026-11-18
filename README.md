@@ -4,7 +4,31 @@
 
 A visual AI workflow automation and autonomous agent platform in the class of n8n, Zapier, Make and MachineCraft.io. Built on [Base44](https://base44.com): real entities, real backend functions, real scheduling, real execution logs. No mock dashboards, no fake connected states, no invented run history.
 
-> **Status: audited, not built.** The [implementation audit](docs/audit.md) found no application instance in the Base44 account: 0 of 18 entities, 0 backend functions, 0 pages. Every category is graded `missing`, not `broken`. The specification, data model, engine design, contracts and test plan are complete here. The app instance is created in the Base44 builder, since new app creation is not scriptable from an agent session, then driven phase by phase against the briefs in `docs/`.
+> **Status: audited, editor deployed, product not built.** The [implementation audit](docs/audit.md) found no application instance in the Base44 account: 0 of 18 entities, 0 backend functions, 0 pages. The workflow studio is deployed as a static build (real graph engine, real validation, local persistence) so the editor is usable today while the backend waits on the app instance. Every category is graded `missing`, not `broken`. The specification, data model, engine design, contracts and test plan are complete here. The app instance is created in the Base44 builder, since new app creation is not scriptable from an agent session, then driven phase by phase against the briefs in `docs/`.
+
+---
+
+## Live editor
+
+**https://muhammadabubakar69.github.io/flowmind-ai/**
+
+A working workflow studio you can open right now. No build step, no framework, no backend.
+
+What is real in this build:
+
+- **Graph editor.** Drag components from the library onto the canvas, move nodes, pull a connection from an output port to an input port, click a connection to delete it.
+- **Node registry.** 35 node types across triggers, AI, logic, applications, data and communication. The same registry drives the library, the config panel and validation, so adding a type is one entry.
+- **Configuration.** Every field writes to the graph, including node-specific config plus error policy (stop, continue, retry), attempt count and timeout.
+- **Persistence.** Graphs save to `localStorage` on every change with debounced autosave, survive reload, and export or import as JSON.
+- **Validation.** Real checks: one trigger, no cycles, no unreachable nodes, no dangling edges, every required field, every non-trigger node connected. Findings are listed per node.
+- **Templates.** Six editable template graphs, each validating with zero errors.
+- **Editor mechanics.** Undo and redo, duplicate, copy and paste, multi-select with shift, delete, zoom, pan, fit to screen, minimap, keyboard shortcuts.
+
+What is deliberately not here: execution, integrations, AI calls, scheduling. Those are backend concerns and they stay empty rather than simulated. The logs panel and the copilot input say so in the product.
+
+```
+node --test tests/     # 20 tests over the graph engine
+```
 
 ---
 
@@ -84,6 +108,12 @@ Each node type ships an input schema, an output schema, a config form, validatio
 ## Repository layout
 
 ```
+site/                         the deployed studio (vanilla ES modules, no build)
+  index.html  styles.css  app.js
+  engine/graph.js             node registry, validation, topology, expressions
+  engine/templates.js         six template graphs
+  engine/store.js             local persistence and export
+tests/graph.test.mjs          20 node:test cases
 README.md                     this file
 docs/audit.md                 audit result, verified platform limits, first milestone
 docs/architecture.md          18 entities, execution engine, security model
