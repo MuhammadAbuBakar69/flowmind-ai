@@ -4,7 +4,7 @@
 
 A visual AI workflow automation and autonomous agent platform in the class of n8n, Zapier, Make and MachineCraft.io. Built on [Base44](https://base44.com): real entities, real backend functions, real scheduling, real execution logs. No mock dashboards, no fake connected states, no invented run history.
 
-> **Status: Phase 1 specification.** The platform spec, database design and Phase 1 builder brief are complete and versioned here. The Base44 app itself is created in the Base44 builder (new app creation cannot be scripted from an agent session), then driven phase by phase against the briefs in `docs/`.
+> **Status: audited, not built.** The [implementation audit](docs/audit.md) found no application instance in the Base44 account: 0 of 18 entities, 0 backend functions, 0 pages. Every category is graded `missing`, not `broken`. The specification, data model, engine design, contracts and test plan are complete here. The app instance is created in the Base44 builder, since new app creation is not scriptable from an agent session, then driven phase by phase against the briefs in `docs/`.
 
 ---
 
@@ -85,9 +85,13 @@ Each node type ships an input schema, an output schema, a config form, validatio
 
 ```
 README.md                     this file
-docs/architecture.md          entities, execution engine, security model
+docs/audit.md                 audit result, verified platform limits, first milestone
+docs/architecture.md          18 entities, execution engine, security model
 docs/phase-1-brief.md         the exact Phase 1 brief given to the Base44 builder
-docs/node-catalog.md          node types with config keys and output shapes as they land
+docs/node-catalog.md          node types with config keys and output shapes
+docs/contracts.md             backend function contracts and environment reference
+docs/testing.md               unit, integration, end-to-end and the required execution test
+docs/production-readiness.md  acceptance gates, known limitations, deployment
 LICENSE                       MIT
 ```
 
@@ -95,8 +99,11 @@ The application source does not live here. Base44 owns the app runtime and its o
 
 ## Roadmap
 
+Ten phases, matching the tracked issues. The production prompt's eight phases map onto these: its 1 to 3 are issues 1 to 4, its 4 to 5 are issues 5 to 7, its 6 to 8 are issues 8 to 10.
+
 | Phase | Scope | Definition of done |
 | --- | --- | --- |
+| 0 | App instance exists | Present in the account with working login |
 | 1 | Auth, database, dashboard, Workflow Studio shell | Real drag-and-drop canvas, graphs persist and reload, zero fabricated data |
 | 2 | Workflow editor depth | Copy/paste, multi-select, minimap, undo/redo history, validation report |
 | 3 | Persistence and graph validation | Versioned graphs, migration path, server-side validation rejects bad graphs |
@@ -129,6 +136,7 @@ Premium dark enterprise SaaS. Near-black canvas, charcoal panels, purple and ele
 3. **One dependency direction.** Canvas, config panel and execution engine all read the same graph schema.
 4. **No browser timers for schedules.** Recurring work belongs to the platform scheduler.
 5. **Phase by phase, verified.** Nothing is declared ready until it has been exercised with real data.
+6. **Constraints stated, not hidden.** The 5 minute function ceiling and the absence of a durable queue are designed around and documented, not papered over.
 
 ## License
 

@@ -6,10 +6,13 @@ Design record for the Base44 implementation. Three layers: entities for state, b
 
 Workspace is the isolation key. Every workflow-scoped row carries `workspace_id`; row-level security scopes reads to workspaces the user owns or is a member of.
 
+Eighteen entities. Two were added in the audit because the original sixteen could not express real requirements: `WorkspaceMember`, since a single account needs different roles in different workspaces and a `role` field on `UserProfile` cannot hold that, and `IntegrationCredential`, separated from `Integration` so a secret can be revoked and rotated without destroying the integration row the UI depends on. Audit detail in [`audit.md`](audit.md).
+
 | Entity | Purpose | Key fields |
 | --- | --- | --- |
-| `UserProfile` | Person behind the login | `user_id`, `display_name`, `avatar`, `default_workspace_id`, `role` (owner/editor/viewer), `timezone` |
+| `UserProfile` | Person behind the login | `user_id`, `display_name`, `avatar`, `default_workspace_id`, `timezone` |
 | `Workspace` | Tenant boundary | `name`, `slug`, `owner_id`, `plan` |
+| `WorkspaceMember` | Role of one user in one workspace | `workspace_id`, `user_id`, `role` (owner/editor/viewer), `invited_by`, `joined_at` |
 | `Workflow` | The automation | `workspace_id`, `name`, `description`, `status` (draft/active/paused/archived), `graph_json`, `version`, `run_count`, `success_count`, `failure_count`, `last_run_at` |
 | `WorkflowVersion` | Immutable snapshot per publish | `workflow_id`, `version`, `graph_json`, `change_summary`, `created_by` |
 | `WorkflowNode` | One node on the canvas | `workflow_id`, `node_key`, `type`, `label`, `config_json`, `position_x`, `position_y` |
@@ -18,6 +21,7 @@ Workspace is the isolation key. Every workflow-scoped row carries `workspace_id`
 | `NodeExecution` | One node inside a run | `execution_id`, `node_key`, `node_type`, `status`, `input_json`, `output_json`, `error_message`, `duration_ms`, `attempt` |
 | `AIAgent` | Reusable agent definition | `workspace_id`, `name`, `description`, `instructions`, `model`, `tools_json`, `memory_enabled`, `knowledge_base_ids`, `input_schema_json`, `output_schema_json`, `max_steps` |
 | `Integration` | A provider connection | `workspace_id`, `provider`, `display_name`, `auth_type`, `status` (disconnected/connected/error), `config_json`, `last_tested_at` |
+| `IntegrationCredential` | Server-only secret store for one connection | `integration_id`, `workspace_id`, `encrypted_payload`, `scopes`, `expires_at`, `rotated_at` |
 | `ScheduledWorkflow` | Recurring trigger config | `workflow_id`, `frequency` (once/daily/weekly/monthly/custom), `cron`, `time_of_day`, `timezone`, `days_of_week`, `start_date`, `end_date`, `is_enabled`, `next_run_at`, `notify_on_failure` |
 | `ApprovalRequest` | Human gate before a sensitive action | `execution_id`, `node_key`, `action_type`, `payload_json`, `status` (pending/approved/rejected), `requested_by`, `decided_by`, `decided_at`, `note` |
 | `WorkflowTemplate` | Marketplace entry | `name`, `category`, `description`, `icon`, `graph_json`, `node_count`, `is_public`, `install_count` |
@@ -29,11 +33,13 @@ Workspace is the isolation key. Every workflow-scoped row carries `workspace_id`
 
 ## 2. Execution engine
 
-A backend function, not the client, executes workflows.
+A backend function, not the client, executes workflows. Base44 functions are capped at 5 minutes of execution, so a run is executed in chunks with its cursor persisted between them. The reasoning and the verified platform limits are in [`audit.md`](audit.md#3-verified-platform-runtime-capability).
 
 ```
-validate -> resolve versions -> topological order -> execute -> persist
+claim -> validate -> resolve version -> topological order -> execute chunk -> persist cursor -> continue
 ```
+
+**Claiming.** A run is claimed with a conditional update from `queued` to `running` plus `lease_owner` and `lease_expires_at`. The update either wins or finds an existing owner, which is the duplicate-run guard. A run whose lease expires is resumed from its cursor by the next invocation.
 
 **Validation.** Exactly one enabled trigger. No cycles. No unreachable nodes. Every non-trigger node has an inbound edge. Every required config key present for its node type. A graph that fails validation is rejected with per-node reasons.
 
